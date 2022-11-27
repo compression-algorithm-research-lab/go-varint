@@ -2,59 +2,58 @@ package varint
 
 import "github.com/golang-infrastructure/go-gtypes"
 
-// ------------------------------------------------ ---------------------------------------------------------------------
+// VarInt 用于表示一个可变长无符号整数
+type VarInt []byte
 
-// Encode 对无符号类型进行编码，注意，如果被编码的符号位数较小可能会约编码越大
-func Encode[T gtypes.Unsigned](value T) []byte {
-	bytes := make([]byte, 0)
-	for value > 127 {
-		bit := (value & 0x7F) | 0x80
-		value >>= 7
-		bytes = append(bytes, uint8(bit))
-	}
-	if value > 0 {
-		bytes = append(bytes, uint8(value&0x7F))
-	}
-	return bytes
+// From 从无符号类型创建一个variant
+func From[T gtypes.Unsigned](value T) VarInt {
+	return Encode[T](value)
 }
 
-func EncodeSlice[T gtypes.Unsigned](valueSlice []T) []byte {
-	slice := make([]byte, 0)
-	for _, value := range valueSlice {
-		slice = append(slice, Encode(value)...)
-	}
-	return slice
+func (x *VarInt) ToUint() uint {
+	return Decode[uint](*x)
 }
 
-// ------------------------------------------------ ---------------------------------------------------------------------
-
-// Decode 对varint编码的无符号整数进行解码，一次解码一个
-func Decode[T gtypes.Unsigned](bytes []byte) T {
-	var r T
-	weight := 0
-	for _, b := range bytes {
-		r = r | (T(b&0x7F) << weight)
-		weight += 7
-		// 判断是否是最后一个字节，如果是最后一个字节说明当前这个数字读取完毕了
-		if b&0x80 == 0 {
-			break
-		}
-	}
-	return r
+func (x *VarInt) ToUint64() uint64 {
+	return Decode[uint64](*x)
 }
 
-// DecodeSlice 解码varint编码的一整个个无符号切片，即一次解码多个
-func DecodeSlice[T gtypes.Unsigned](bytes []byte) []T {
-	slice := make([]T, 0)
-	lastIndex := 0
-	for index, b := range bytes {
-		if b&0x80 == 0 {
-			value := Decode[T](bytes[lastIndex : index+1])
-			slice = append(slice, value)
-			lastIndex = index + 1
-		}
-	}
-	return slice
+func (x *VarInt) Add(v VarInt) VarInt {
+	newValue := x.ToUint64() + v.ToUint64()
+	return Encode[uint64](newValue)
 }
 
-// ------------------------------------------------ ---------------------------------------------------------------------
+func (x *VarInt) Sub(v VarInt) VarInt {
+	newValue := x.ToUint64() - v.ToUint64()
+	return Encode[uint64](newValue)
+}
+
+func (x *VarInt) Multi(v VarInt) VarInt {
+	newValue := x.ToUint64() * v.ToUint64()
+	return Encode[uint64](newValue)
+}
+
+func (x *VarInt) Divide(v VarInt) VarInt {
+	newValue := x.ToUint64() / v.ToUint64()
+	return Encode[uint64](newValue)
+}
+
+func (x *VarInt) GreatThan(v VarInt) bool {
+	return x.ToUint64() > v.ToUint64()
+}
+
+func (x *VarInt) GreatThanOrEquals(v VarInt) bool {
+	return x.ToUint64() >= v.ToUint64()
+}
+
+func (x *VarInt) LessThan(v VarInt) bool {
+	return x.ToUint64() < v.ToUint64()
+}
+
+func (x *VarInt) LessThanOrEqual(v VarInt) bool {
+	return x.ToUint64() <= v.ToUint64()
+}
+
+func (x *VarInt) Equals(v VarInt) bool {
+	return x.ToUint64() == v.ToUint64()
+}
