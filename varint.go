@@ -2,19 +2,25 @@ package varint
 
 import "github.com/golang-infrastructure/go-gtypes"
 
-// VarInt 用于表示一个可变长无符号整数
+// VarInt 用于表示一个可变长整数，可以根据自己的需要选择是否支持符号存储（最高位可以是符号位，也可以是数据位）
 type VarInt []byte
 
-// From 从无符号类型创建一个variant
-func From[T gtypes.Unsigned](value T) VarInt {
+// From 从无符号整数类型创建一个variant
+func From[T gtypes.Integer](value T) VarInt {
 	return Encode[T](value)
 }
 
-func (x *VarInt) ToUint() uint {
-	return Decode[uint](*x)
+// IsZero 此整数是否为0
+func (x *VarInt) IsZero() bool {
+	return x.ToInt() == 0
 }
 
-func (x *VarInt) ToUint64() uint64 {
+// 转换为
+func (x *VarInt) ToInt() uint {
+	return DecodeFromVarInt[uint](*x)
+}
+
+func (x *VarInt) ToInt64() int64 {
 	return Decode[uint64](*x)
 }
 
