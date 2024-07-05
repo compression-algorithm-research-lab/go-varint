@@ -109,12 +109,12 @@ func TestDecode(t *testing.T) {
 }
 
 func TestDecodeSlice(t *testing.T) {
-	ints := []uint64{
-		1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-	}
-	bytes := EncodeSlice(ints)
-	t.Log(len(bytes))
-	t.Log(bytes)
-	slice := DecodeSlice[uint64](bytes)
-	t.Log(slice)
+	slice := DecodeSlice[uint]([]byte{
+		0x1,       // 1
+		0x7f,      // 127
+		0x0,       // 0
+		0xff, 0x1, // 255
+		0x80, 0x2, // 256
+	})
+	assert.Equal(t, []uint{1, 127, 0, 255, 256}, slice)
 }
