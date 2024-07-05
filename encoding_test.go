@@ -63,11 +63,49 @@ func TestEncodeSlice(t *testing.T) {
 }
 
 func TestDecode(t *testing.T) {
-	var a uint64
-	a = 123456
-	bytes := Encode(a)
-	t.Log(bytes)
-	t.Log(Decode[uint64](bytes))
+
+	// case: value 0
+	{
+		v := Decode[uint]([]byte{0x0})
+		assert.Equal(t, uint(0), v)
+	}
+
+	// case: value 1
+	{
+		v := Decode[uint]([]byte{0x1})
+		assert.Equal(t, uint(1), v)
+	}
+
+	// case: value 2
+	{
+		v := Decode[uint]([]byte{0x2})
+		assert.Equal(t, uint(2), v)
+	}
+
+	// case: value 127
+	{
+		v := Decode[uint]([]byte{0x7f})
+		assert.Equal(t, uint(127), v)
+	}
+
+	// case: value 128
+	{
+		v := Decode[uint]([]byte{0x80, 0x1})
+		assert.Equal(t, uint(128), v)
+	}
+
+	// case: value 255
+	{
+		v := Decode[uint]([]byte{0xff, 0x1})
+		assert.Equal(t, uint(255), v)
+	}
+
+	// case: case: value 256
+	{
+		v := Decode[uint]([]byte{0x80, 0x2})
+		assert.Equal(t, uint(256), v)
+	}
+
 }
 
 func TestDecodeSlice(t *testing.T) {
