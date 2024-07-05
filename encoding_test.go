@@ -106,15 +106,145 @@ func TestDecode(t *testing.T) {
 		assert.Equal(t, uint(256), v)
 	}
 
+	// case: 畸形编码的byte slice，没有设置结束标志位
+	{
+		// 0x82中的0x80表示期望后面还有数组，但是实际上是没有的
+		// 不能报错，并且能够正确处理到期望的值
+		v := Decode[uint]([]byte{0x80, 0x82})
+		assert.Equal(t, uint(256), v)
+	}
+
+	// case: byte slice中只有一部分是varint编码，后面还有其它的内容，但是正确设置了varint的结束标志位
+	{
+		// 期望：只读取到第一个无符号数字，后边的bytes不管是无符号数字的varint编码还是其它内容都不会读取
+		v := Decode[uint]([]byte{
+			0x80, 0x2,
+			0xFF, 0xFF,
+			0xFF, 0xFF,
+			0xFF, 0xFF,
+			0xFF, 0xFF,
+			0xFF, 0xFF,
+			0xFF, 0xFF,
+		})
+		assert.Equal(t, uint(256), v)
+	}
+
+	// case: 解码的时候会发生溢出
+	{
+		v := Decode[uint8]([]byte{
+			0xFF, 0xFF,
+			0xFF, 0xFF,
+			0xFF, 0xFF,
+			0xFF, 0xFF,
+			0xFF, 0xFF,
+			0xFF, 0xFF,
+			0xFF, 0xFF,
+		})
+		assert.Equal(t, uint8(0xff), v)
+	}
+
 }
 
 func TestDecodeSlice(t *testing.T) {
-	slice := DecodeSlice[uint]([]byte{
-		0x1,       // 1
-		0x7f,      // 127
-		0x0,       // 0
-		0xff, 0x1, // 255
-		0x80, 0x2, // 256
-	})
-	assert.Equal(t, []uint{1, 127, 0, 255, 256}, slice)
+
+	// case: 多个无符号整数解码，varint byte数组是合法的
+	{
+		slice := DecodeSlice[uint]([]byte{
+			0x1,       // 1
+			0x7f,      // 127
+			0x0,       // 0
+			0xff, 0x1, // 255
+			0x80, 0x2, // 256
+		})
+		assert.Equal(t, []uint{1, 127, 0, 255, 256}, slice)
+	}
+
+	// case: 1个无符号整数解码，varint byte数组畸形，但是不会发生溢出
+	{
+		// 期望能够正常解码，不会发生报错，并且返回值是期望值
+		slice := DecodeSlice[uint]([]byte{
+			0x81, // 1
+		})
+		assert.Equal(t, []uint{1}, slice)
+	}
+
+	// case: 多个无符号整数解码，varint byte数组畸形，但是不会发生溢出
+	{
+		// 期望能够正常解码，不会发生报错，并且返回值是期望值
+		slice := DecodeSlice[uint]([]byte{
+			0x1,       // 1
+			0x7f,      // 127
+			0x0,       // 0
+			0xff, 0x1, // 255
+			0x80, 0x82, // 256
+		})
+		assert.Equal(t, []uint{1, 127, 0, 255, 256}, slice)
+	}
+
+	// case: varint byte数组是畸形的，会发生溢出
+	{
+		slice := DecodeSlice[uint8]([]byte{
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+			0xFF,
+		})
+		assert.Equal(t, []uint8{0xff}, slice)
+	}
+
 }
