@@ -52,6 +52,14 @@ func TestEncode(t *testing.T) {
 }
 
 func TestEncodeSlice(t *testing.T) {
+	slice := EncodeSlice([]uint64{1, 127, 0, 255, 256})
+	assert.Equal(t, []byte{
+		0x1,       // 1
+		0x7f,      // 127
+		0x0,       // 0
+		0xff, 0x1, // 255
+		0x80, 0x2, // 256
+	}, slice)
 }
 
 func TestDecode(t *testing.T) {
