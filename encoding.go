@@ -4,7 +4,7 @@ import "github.com/golang-infrastructure/go-gtypes"
 
 // ------------------------------------------------ ---------------------------------------------------------------------
 
-// Encode 对无符号类型进行编码，注意，如果被编码的符号位数较小可能会约编码越大
+// Encode 对无符号类型进行编码，注意，如果被编码的数字位数较小可能会越编码越大
 func Encode[T gtypes.Unsigned](value T) []byte {
 	bytes := make([]byte, 0)
 	for value > 127 {
