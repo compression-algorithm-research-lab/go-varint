@@ -248,3 +248,63 @@ func TestDecodeSlice(t *testing.T) {
 	}
 
 }
+
+func TestEncodeChannel(t *testing.T) {
+
+	// 测试测试数据
+	inputChannel := make(chan uint64, 10)
+	inputChannel <- 1
+	inputChannel <- 127
+	inputChannel <- 0
+	inputChannel <- 255
+	inputChannel <- 256
+	close(inputChannel)
+
+	// 开始对测试数据编码
+	outputChannel := make(chan byte, 10000)
+	EncodeChannel(inputChannel, outputChannel)
+
+	// 读取编码结果，判断是否正确
+	outputChannelBytes := make([]byte, 0)
+	for b := range outputChannel {
+		outputChannelBytes = append(outputChannelBytes, b)
+	}
+	assert.Equal(t, []byte{
+		0x1,       // 1
+		0x7f,      // 127
+		0x0,       // 0
+		0xff, 0x1, // 255
+		0x80, 0x2, // 256
+	}, outputChannelBytes)
+}
+
+func TestDecodeChannel(t *testing.T) {
+
+	// 测试测试数据
+	inputBytes := []byte{
+		0x1,       // 1
+		0x7f,      // 127
+		0x0,       // 0
+		0xff, 0x1, // 255
+		0x80, 0x2, // 256
+	}
+	inputChannel := make(chan byte, len(inputBytes))
+	for _, b := range inputBytes {
+		inputChannel <- b
+	}
+	close(inputChannel)
+
+	// 开始对测试数据解码
+	outputChannel := make(chan uint64, 10000)
+	DecodeChannel[uint64](inputChannel, outputChannel)
+
+	// 读取编码结果，判断是否正确
+	outputChannelValues := make([]uint64, 0)
+	for value := range outputChannel {
+		outputChannelValues = append(outputChannelValues, value)
+	}
+	assert.Equal(t, []uint64{
+		1, 127, 0, 255, 256,
+	}, outputChannelValues)
+
+}

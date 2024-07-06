@@ -1,6 +1,8 @@
 package varint
 
-import "github.com/golang-infrastructure/go-gtypes"
+import (
+	"github.com/golang-infrastructure/go-gtypes"
+)
 
 // 这个文件中存放的是比较靠底层的方法实现，上层的API都是对这些底层方法的进一步封装
 // 约定：
@@ -53,6 +55,17 @@ func EncodeSlice[T gtypes.Unsigned](valueSlice []T) []byte {
 	return slice
 }
 
+// EncodeChannel 从无符号整数channel中读取数据，varint编码之后发送到字节channel
+func EncodeChannel[T gtypes.Unsigned](valueChannel <-chan T, outputByteChannel chan<- byte) {
+	for v := range valueChannel {
+		varintBytes := Encode[T](v)
+		for _, b := range varintBytes {
+			outputByteChannel <- b
+		}
+	}
+	close(outputByteChannel)
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 
 // Decode 对varint编码的无符号整数进行解码，一次解码一个
@@ -90,6 +103,27 @@ func DecodeSlice[T gtypes.Unsigned](bytes []byte) []T {
 	}
 
 	return slice
+}
+
+// DecodeChannel 通过channel流式解码
+func DecodeChannel[T gtypes.Unsigned](varintBytesChannel <-chan byte, outputChannel chan<- T) {
+	nowBytes := make([]byte, 0)
+	for b := range varintBytesChannel {
+
+		// 长度限制，避免畸形数据打爆内存
+		if len(nowBytes) <= 64 {
+			nowBytes = append(nowBytes, b)
+		}
+
+		// 读取完一个无符号整数的时候就解码发送一次
+		if b&ByteHighestBit == VarIntEndByteHighestBitValue {
+			v := Decode[T](nowBytes)
+			outputChannel <- v
+			nowBytes = make([]byte, 0)
+		}
+
+	}
+	close(outputChannel)
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
